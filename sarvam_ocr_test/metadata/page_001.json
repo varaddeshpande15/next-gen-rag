@@ -1,0 +1,21 @@
+{
+  "page_num": 1,
+  "image_width": 2480,
+  "image_height": 3509,
+  "created_at": "2026-03-05T07:33:51.953955+00:00",
+  "blocks": [
+    {
+      "block_id": "20260305_edf23405-ac95-4d00-90b4-06aef3400f5c_1_block_000",
+      "coordinates": {
+        "x1": 230.0,
+        "y1": 291.0,
+        "x2": 759.0,
+        "y2": 369.0
+      },
+      "layout_tag": "paragraph",
+      "confidence": 0.6976407766342163,
+      "reading_order": 1,
+      "text": "Dummy PDF file"
+    }
+  ]
+}

@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CHANDRA — Document Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        /* ── RESET & BASE ─────────────────────────────────────────── */
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-void: #050810;
+            --bg-deep: #080d1a;
+            --bg-surface: #0d1426;
+            --bg-elevated: #121a30;
+            --bg-glass: rgba(13, 20, 38, 0.7);
+
+            --cyan: #00d4ff;
+            --cyan-dim: #0099bb;
+            --cyan-glow: rgba(0, 212, 255, 0.15);
+            --cyan-subtle: rgba(0, 212, 255, 0.06);
+
+            --amber: #ffb347;
+            --amber-dim: rgba(255, 179, 71, 0.7);
+            --red-alert: #ff4757;
+            --green-ok: #2ed573;
+            --yellow-mid: #ffa502;
+
+            --text-primary: #e8eeff;
+            --text-secondary: #8899bb;
+            --text-muted: #3d4f6e;
+
+            --border: rgba(0, 212, 255, 0.12);
+            --border-bright: rgba(0, 212, 255, 0.3);
+
+            --radius-sm: 6px;
+            --radius-md: 12px;
+            --radius-lg: 18px;
+            --radius-xl: 24px;
+
+            --font-display: 'Syne', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --font-body: 'Instrument Sans', sans-serif;
+        }
+
+        html {
+            font-size: 16px;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: var(--bg-void);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── GRID BACKGROUND ─────────────────────────────────────── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0, 212, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 255, 0.025) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0, 212, 255, 0.07) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── SCROLLBAR ───────────────────────────────────────────── */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--cyan-dim);
+            border-radius: 2px;
+        }
+
+        /* ── LAYOUT ──────────────────────────────────────────────── */
+        .app-shell {
+            position: relative;
+            display: grid;
+            grid-template-rows: 60px 1fr;
+            grid-template-columns: 280px 1fr 320px;
+            height: 100vh;
+            gap: 0;
+            z-index: 1;
+        }
+
+        /* ── TOP NAV ─────────────────────────────────────────────── */
+        .topnav {
+            grid-column: 1 / -1;
+            grid-row: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(5, 8, 16, 0.9);
+            backdrop-filter: blur(20px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--cyan), #0055ff);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+            animation: logoBreath 3s ease-in-out infinite;
+        }
+
+        @keyframes logoBreath {
+
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 35px rgba(0, 212, 255, 0.7);
+            }
+        }
+
+        .logo-name {
+            font-family: var(--font-display);
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            color: var(--text-primary);
+        }
+
+        .logo-name span {
+            color: var(--cyan);
+        }
+
+        .nav-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--green-ok);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.8);
+            }
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-badge {
+            padding: 4px 10px;
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.05em;
+        }
+
+        .nav-badge.active {
+            border-color: var(--cyan-dim);
+            color: var(--cyan);
+            background: var(--cyan-subtle);
+        }
+
+        /* ── LEFT PANEL ──────────────────────────────────────────── */
+        .panel-left {
+            grid-column: 1;
+            grid-row: 2;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--bg-deep);
+        }
+
+        .panel-section {
+            padding: 20px 20px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-label {
+            font-family: var(--font-mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.15em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        /* ── UPLOAD ZONE ─────────────────────────────────────────── */
+        .upload-zone {
+            border: 1.5px dashed var(--border);
+            border-radius: var(--radius-md);
+            padding: 24px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s;
+            position: relative;
+            overflow: hidden;
+            background: var(--cyan-subtle);
+        }
+
+        .upload-zone::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--cyan-subtle), transparent);
+            opacity: 0;
+            transition: 0.3s;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.drag-over {
+            border-color: var(--cyan);
+            background: rgba(0, 212, 255, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .upload-zone:hover::before {
+            opacity: 1;
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            display: block;
+            margin-bottom: 10px;
+            opacity: 0.8;
+        }
+
+        .upload-text-main {
+            font-family: var(--font-display);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .upload-text-sub {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        .upload-input {
+            display: none;
+        }
+
+        /* ── UPLOADED FILES LIST ─────────────────────────────────── */
+        .files-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px;
+        }
+
+        .file-card {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .file-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--cyan);
+            transform: scaleY(0);
+            transition: 0.2s;
+        }
+
+        .file-card:hover,
+        .file-card.active {
+            border-color: var(--border-bright);
+            background: rgba(0, 212, 255, 0.06);
+        }
+
+        .file-card.active::before {
+            transform: scaleY(1);
+        }
+
+        .file-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 85, 255, 0.2));
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-name {
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-meta {
+            font-family: var(--font-mono);
+            font-size: 0.62rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .file-status {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .file-status.indexed {
+            background: var(--green-ok);
+            box-shadow: 0 0 6px var(--green-ok);
+        }
+
+        .file-status.indexing {
+            background: var(--amber);
+            animation: pulse 1s infinite;
+        }
+
+        .file-status.pending {
+            background: var(--text-muted);
+        }
+
+        /* ── OCR PROGRESS ────────────────────────────────────────── */
+        .progress-bar-wrap {
+            margin-top: 8px;
+        }
+
+        .progress-bar-track {
+            height: 3px;
+            background: var(--bg-elevated);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cyan), #0055ff);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.4s ease;
+            box-shadow: 0 0 8px var(--cyan);
+        }
+
+        .progress-label {
+            font-family: var(--font-mono);
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* ── STATS ROW ───────────────────────────────────────────── */
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+        }
+
+        .stat-cell {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            text-align: center;
+        }
+
+        .stat-val {
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--cyan);
+            display: block;
+        }
+
+        .stat-lbl {
+            font-family: var(--font-mono);
+            font-size: 0.58rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* ── CENTER PANEL — CHAT ─────────────────────────────────── */
+        .panel-center {
+            grid-column: 2;
+            grid-row: 2;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--bg-void);
+            position: relative;
+        }
+
+        /* ── EMPTY STATE ─────────────────────────────────────────── */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 40px;
+        }
+
+        .empty-orb {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(0, 212, 255, 0.3), rgba(0, 85, 255, 0.1), transparent);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            animation: floatOrb 4s ease-in-out infinite;
+            position: relative;
+        }
+
+        .empty-orb::before {
+            content: '';
+            position: absolute;
+            inset: -15px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 212, 255, 0.08);
+            animation: expandRing 4s ease-in-out infinite;
+        }
+
+        @keyframes floatOrb {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-12px);
+            }
+        }
+
+        @keyframes expandRing {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        .empty-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-align: center;
+        }
+
+        .empty-sub {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-align: center;
+            max-width: 360px;
+            line-height: 1.6;
+        }
+
+        .suggestion-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 8px;
+        }
+
+        .pill {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--bg-elevated);
+            font-family: var(--font-body);
+        }
+
+        .pill:hover {
+            border-color: var(--cyan);
+            color: var(--cyan);
+            background: var(--cyan-subtle);
+            transform: translateY(-2px);
+        }
+
+        /* ── CHAT MESSAGES ───────────────────────────────────────── */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+
+        .msg-row {
+            display: flex;
+            gap: 14px;
+            animation: msgIn 0.35s cubic-bezier(.22, .61, .36, 1);
+        }
+
+        @keyframes msgIn {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg-row.user {
+            flex-direction: row-reverse;
+        }
+
+        .msg-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .msg-avatar.ai {
+            background: linear-gradient(135deg, var(--cyan), #0055ff);
+            box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
+        }
+
+        .msg-avatar.user-av {
+            background: linear-gradient(135deg, #6c3bff, #ff4757);
+        }
+
+        .msg-body {
+            max-width: 75%;
+        }
+
+        .msg-bubble {
+            padding: 14px 18px;
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            line-height: 1.7;
+            position: relative;
+        }
+
+        .msg-bubble.ai {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-top-left-radius: 4px;
+            color: var(--text-primary);
+        }
+
+        .msg-bubble.user-b {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.18), rgba(0, 85, 255, 0.14));
+            border: 1px solid rgba(0, 212, 255, 0.25);
+            border-top-right-radius: 4px;
+            color: var(--text-primary);
+        }
+
+        .msg-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .msg-row.user .msg-meta {
+            justify-content: flex-end;
+        }
+
+        .timestamp {
+            font-family: var(--font-mono);
+            font-size: 0.6rem;
+            color: var(--text-muted);
+        }
+
+        /* ── CONFIDENCE BADGE ────────────────────────────────────── */
+        .conf-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 100px;
+            font-family: var(--font-mono);
+            font-size: 0.62rem;
+            font-weight: 500;
+            border: 1px solid;
+        }
+
+        .conf-badge.high {
+            color: var(--green-ok);
+            border-color: rgba(46, 213, 115, 0.3);
+            background: rgba(46, 213, 115, 0.08);
+        }
+
+        .conf-badge.medium {
+            color: var(--yellow-mid);
+            border-color: rgba(255, 165, 2, 0.3);
+            background: rgba(255, 165, 2, 0.08);
+        }
+
+        .conf-badge.low {
+            color: var(--red-alert);
+            border-color: rgba(255, 71, 87, 0.3);
+            background: rgba(255, 71, 87, 0.08);
+        }
+
+        .conf-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        /* ── SOURCE CITATIONS ────────────────────────────────────── */
+        .citations {
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .citation-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: rgba(0, 212, 255, 0.04);
+            border: 1px solid rgba(0, 212, 255, 0.1);
+            border-left: 2px solid var(--cyan);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .citation-item:hover {
+            background: rgba(0, 212, 255, 0.09);
+            border-left-color: var(--cyan);
+        }
+
+        .citation-page {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: var(--cyan);
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .citation-text {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ── TYPING INDICATOR ────────────────────────────────────── */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 14px 18px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            border-top-left-radius: 4px;
+            width: fit-content;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--cyan);
+            border-radius: 50%;
+            animation: typingBounce 1.2s ease-in-out infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typingBounce {
+
+            0%,
+            60%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.4;
+            }
+
+            30% {
+                transform: translateY(-6px);
+                opacity: 1;
+            }
+        }
+
+        .typing-label {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+
+        /* ── CHAT INPUT ──────────────────────────────────────────── */
+        .chat-input-area {
+            padding: 16px 24px 20px;
+            border-top: 1px solid var(--border);
+            background: rgba(5, 8, 16, 0.9);
+            backdrop-filter: blur(20px);
+        }
+
+        .memory-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 10px;
+            font-family: var(--font-mono);
+            font-size: 0.62rem;
+            color: var(--text-muted);
+        }
+
+        .memory-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            background: rgba(0, 212, 255, 0.06);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: 100px;
+            color: var(--cyan-dim);
+        }
+
+        .input-wrapper {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 12px 16px;
+            transition: all 0.25s;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--cyan-dim);
+            box-shadow: 0 0 0 3px var(--cyan-glow);
+        }
+
+        #chat-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            resize: none;
+            max-height: 120px;
+            min-height: 24px;
+        }
+
+        #chat-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .input-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .lang-toggle {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 10px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .lang-toggle:hover {
+            border-color: var(--cyan-dim);
+            color: var(--cyan);
+        }
+
+        .send-btn {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--cyan), #0055ff);
+            border: none;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            box-shadow: 0 0 16px rgba(0, 212, 255, 0.3);
+        }
+
+        .send-btn:hover {
+            transform: scale(1.06);
+            box-shadow: 0 0 24px rgba(0, 212, 255, 0.5);
+        }
+
+        .send-btn:active {
+            transform: scale(0.96);
+        }
+
+        .send-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+        }
+
+        /* ── RIGHT PANEL ─────────────────────────────────────────── */
+        .panel-right {
+            grid-column: 3;
+            grid-row: 2;
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--bg-deep);
+        }
+
+        /* ── TABS ────────────────────────────────────────────────── */
+        .tab-bar {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            padding: 0 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 14px 8px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-secondary);
+        }
+
+        .tab-btn.active {
+            color: var(--cyan);
+            border-bottom-color: var(--cyan);
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── PAGE PREVIEW ────────────────────────────────────────── */
+        .page-preview-area {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .page-thumb {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .page-thumb:hover {
+            border-color: var(--cyan-dim);
+            transform: translateY(-2px);
+        }
+
+        .page-thumb.highlighted {
+            border-color: var(--cyan);
+            box-shadow: 0 0 20px var(--cyan-glow);
+        }
+
+        .page-thumb-img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: var(--text-muted);
+        }
+
+        .page-thumb-footer {
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .page-num {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+
+        .highlight-badge {
+            font-family: var(--font-mono);
+            font-size: 0.6rem;
+            color: var(--cyan);
+            padding: 2px 6px;
+            background: var(--cyan-subtle);
+            border-radius: 4px;
+        }
+
+        /* ── CONTEXT CHUNKS ──────────────────────────────────────── */
+        .chunks-area {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chunk-card {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            transition: all 0.2s;
+        }
+
+        .chunk-card.top-result {
+            border-color: rgba(0, 212, 255, 0.3);
+            background: rgba(0, 212, 255, 0.04);
+        }
+
+        .chunk-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .chunk-source {
+            font-family: var(--font-mono);
+            font-size: 0.63rem;
+            color: var(--cyan);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .chunk-score {
+            font-family: var(--font-mono);
+            font-size: 0.63rem;
+            padding: 2px 8px;
+            border-radius: 100px;
+            background: rgba(46, 213, 115, 0.1);
+            color: var(--green-ok);
+            border: 1px solid rgba(46, 213, 115, 0.2);
+        }
+
+        .chunk-text {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* ── EXPORT SECTION ──────────────────────────────────────── */
+        .export-area {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .export-card {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+        }
+
+        .export-title {
+            font-family: var(--font-display);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .export-desc {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            margin-bottom: 14px;
+            line-height: 1.5;
+        }
+
+        .export-btn {
+            width: 100%;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, var(--cyan), #0055ff);
+            border: none;
+            border-radius: var(--radius-sm);
+            color: white;
+            font-family: var(--font-display);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 0 16px rgba(0, 212, 255, 0.25);
+        }
+
+        .export-btn:hover {
+            box-shadow: 0 0 28px rgba(0, 212, 255, 0.45);
+            transform: translateY(-1px);
+        }
+
+        .export-btn.secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            box-shadow: none;
+        }
+
+        .export-btn.secondary:hover {
+            border-color: var(--cyan-dim);
+            color: var(--cyan);
+            box-shadow: none;
+        }
+
+        /* ── SESSION STATS ───────────────────────────────────────── */
+        .session-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .mini-stat {
+            text-align: center;
+            padding: 10px 8px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+
+        .mini-stat-val {
+            font-family: var(--font-mono);
+            font-size: 1.1rem;
+            color: var(--cyan);
+            display: block;
+            font-weight: 500;
+        }
+
+        .mini-stat-lbl {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        /* ── TOAST NOTIFICATIONS ─────────────────────────────────── */
+        .toast-container {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .toast {
+            padding: 12px 20px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid;
+            animation: toastIn 0.3s cubic-bezier(.22, .61, .36, 1);
+            backdrop-filter: blur(16px);
+            pointer-events: all;
+        }
+
+        .toast.success {
+            background: rgba(46, 213, 115, 0.12);
+            border-color: rgba(46, 213, 115, 0.3);
+            color: var(--green-ok);
+        }
+
+        .toast.info {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: rgba(0, 212, 255, 0.3);
+            color: var(--cyan);
+        }
+
+        .toast.error {
+            background: rgba(255, 71, 87, 0.1);
+            border-color: rgba(255, 71, 87, 0.3);
+            color: var(--red-alert);
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px) scale(0.96);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* ── LANGUAGE MODAL ──────────────────────────────────────── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 8, 16, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.25s;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-box {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-bright);
+            border-radius: var(--radius-xl);
+            padding: 28px;
+            width: 360px;
+            box-shadow: 0 0 60px rgba(0, 212, 255, 0.15);
+        }
+
+        .modal-title {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .modal-desc {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .lang-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .lang-chip {
+            padding: 8px 6px;
+            text-align: center;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .lang-chip:hover {
+            border-color: var(--cyan-dim);
+            color: var(--cyan);
+            background: var(--cyan-subtle);
+        }
+
+        .lang-chip.selected {
+            border-color: var(--cyan);
+            color: var(--cyan);
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .modal-close {
+            width: 100%;
+            padding: 10px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            border-color: var(--border-bright);
+            color: var(--text-primary);
+        }
+
+        /* ── UTILS ───────────────────────────────────────────────── */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-shell">
+
+        <!-- ── TOP NAV ─────────────────────────── -->
+        <nav class="topnav">
+            <div class="nav-logo">
+                <div class="logo-icon">✦</div>
+                <span class="logo-name">NXT_GEN<span>-RAG</span></span>
+            </div>
+            <div class="nav-status">
+                <div class="status-dot"></div>
+                <span id="system-status">ALL SYSTEMS NOMINAL</span>
+            </div>
+            <div class="nav-right">
+                <span class="nav-badge active" id="ocr-badge">SARVAM OCR</span>
+                <span class="nav-badge active" id="llm-badge">QWEN 2.5-7B</span>
+                <span class="nav-badge" id="index-badge">INDEX EMPTY</span>
+            </div>
+        </nav>
+
+        <!-- ── LEFT PANEL ─────────────────────── -->
+        <aside class="panel-left">
+
+            <div class="panel-section">
+                <div class="panel-label">Document Upload</div>
+                <div class="upload-zone" id="upload-zone">
+                    <input type="file" id="file-input" class="upload-input" accept=".pdf" multiple>
+                    <span class="upload-icon">📄</span>
+                    <span class="upload-text-main">Drop PDFs here</span>
+                    <span class="upload-text-sub">or click to browse · max 50MB</span>
+                </div>
+            </div>
+
+            <div class="panel-label" style="padding:16px 20px 8px; margin:0;">Loaded Documents</div>
+            <div class="files-list" id="files-list">
+                <div
+                    style="text-align:center; padding:24px 0; color:var(--text-muted); font-size:0.75rem; font-family:var(--font-mono);">
+                    No documents loaded
+                </div>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-cell">
+                    <span class="stat-val" id="stat-chunks">0</span>
+                    <span class="stat-lbl">Chunks</span>
+                </div>
+                <div class="stat-cell">
+                    <span class="stat-val" id="stat-pages">0</span>
+                    <span class="stat-lbl">Pages</span>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- ── CENTER PANEL ────────────────────── -->
+        <main class="panel-center">
+
+            <!-- Empty state -->
+            <div class="empty-state" id="empty-state">
+                <div class="empty-orb">🔮</div>
+                <div class="export-title">Session Report</div>
+                <div class="empty-sub">Chandra reads your handwritten notes, indexes them locally, and answers questions
+                    with precise citations.</div>
+                <div class="suggestion-pills">
+                    <span class="pill" onclick="insertSuggestion('What are the main topics in these notes?')">Main
+                        topics</span>
+                    <span class="pill" onclick="insertSuggestion('Summarize the key concepts')">Summarize</span>
+                    <span class="pill" onclick="insertSuggestion('What does the diagram on page 2 show?')">Page 2
+                        diagram</span>
+                    <span class="pill" onclick="insertSuggestion('मुझे इन नोट्स के बारे में बताओ')">हिन्दी में
+                        पूछें</span>
+                </div>
+            </div>
+
+            <!-- Chat messages -->
+            <div class="chat-messages hidden" id="chat-messages"></div>
+
+            <!-- Input area -->
+            <div class="chat-input-area">
+                <div class="memory-indicator">
+                    <span>Memory:</span>
+                    <span class="memory-chip" id="memory-chip">⊙ 0 turns active</span>
+                    <span style="margin-left:auto; cursor:pointer; color:var(--red-alert);" onclick="clearMemory()"
+                        title="Clear memory">✕ Clear</span>
+                </div>
+                <div class="input-wrapper">
+                    <textarea id="chat-input" rows="1" placeholder="Ask anything about your notes…"
+                        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+                    <div class="input-actions">
+                        <button class="lang-toggle" onclick="openLangModal()" title="Language">
+                            🌐 <span id="lang-label">AUTO</span>
+                        </button>
+                        <button class="send-btn" onclick="sendMessage()">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- ── RIGHT PANEL ─────────────────────── -->
+        <aside class="panel-right">
+
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="switchTab('preview')">PREVIEW</button>
+                <button class="tab-btn" onclick="switchTab('context')">CONTEXT</button>
+                <button class="tab-btn" onclick="switchTab('export')">EXPORT</button>
+            </div>
+
+            <!-- Tab: Page Preview -->
+            <div class="tab-content active" id="tab-preview">
+                <div class="page-preview-area" id="preview-area">
+                    <div
+                        style="text-align:center; padding:40px 20px; color:var(--text-muted); font-family:var(--font-mono); font-size:0.72rem;">
+                        Page previews will appear here after uploading a PDF
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Context Chunks -->
+            <div class="tab-content" id="tab-context">
+                <div class="chunks-area" id="chunks-area">
+                    <div
+                        style="text-align:center; padding:40px 20px; color:var(--text-muted); font-family:var(--font-mono); font-size:0.72rem;">
+                        Retrieved context chunks will appear here after asking a question
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Export -->
+            <div class="tab-content" id="tab-export">
+                <div class="export-area">
+
+                    <div class="export-card">
+                        <div class="export-title">Session Report</div>
+                        <div class="export-desc">Auto-generate a PDF report of this session with all Q&A pairs and
+                            source citations.</div>
+                        <div class="session-stats">
+                            <div class="mini-stat">
+                                <span class="mini-stat-val" id="export-qcount">0</span>
+                                <span class="mini-stat-lbl">Questions</span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="mini-stat-val" id="export-ccount">0</span>
+                                <span class="mini-stat-lbl">Citations</span>
+                            </div>
+                        </div>
+                        <br>
+                        <button class="export-btn" onclick="exportReport()">
+                            <span>📄</span> Export PDF Report
+                        </button>
+                    </div>
+
+                    <div class="export-card">
+                        <div class="export-title">System Diagnostics</div>
+                        <div class="export-desc">Current model configuration and resource usage.</div>
+                        <div
+                            style="font-family:var(--font-mono); font-size:0.65rem; color:var(--text-secondary); line-height:2;">
+                            <div style="display:flex; justify-content:space-between;"><span
+                                    style="color:var(--text-muted);">OCR</span><span style="color:var(--cyan);">Sarvam
+                                    Vision</span></div>
+                            <div style="display:flex; justify-content:space-between;"><span
+                                    style="color:var(--text-muted);">Embeddings</span><span
+                                    style="color:var(--cyan);">nomic-embed-text</span></div>
+                            <div style="display:flex; justify-content:space-between;"><span
+                                    style="color:var(--text-muted);">Vector DB</span><span
+                                    style="color:var(--cyan);">FAISS CPU</span></div>
+                            <div style="display:flex; justify-content:space-between;"><span
+                                    style="color:var(--text-muted);">Reranker</span><span
+                                    style="color:var(--cyan);">ms-marco CrossEnc</span></div>
+                            <div style="display:flex; justify-content:space-between;"><span
+                                    style="color:var(--text-muted);">LLM</span><span
+                                    style="color:var(--cyan);">Qwen2.5-7B Q3_K_M</span></div>
+                            <div style="display:flex; justify-content:space-between;"><span
+                                    style="color:var(--text-muted);">VRAM</span><span
+                                    style="color:var(--green-ok);">~3.8 GB / 4 GB</span></div>
+                        </div>
+                    </div>
+
+                    <button class="export-btn secondary" onclick="clearSession()">
+                        ✕ Clear Session & Index
+                    </button>
+
+                </div>
+            </div>
+
+        </aside>
+
+    </div>
+
+    <!-- ── LANGUAGE MODAL ──────────────────────── -->
+    <div class="modal-overlay" id="lang-modal" onclick="closeLangModal(event)">
+        <div class="modal-box">
+            <div class="modal-title">🌐 Language Mode</div>
+            <div class="modal-desc">Chandra auto-detects language. You can also force a response language.</div>
+            <div class="lang-grid" id="lang-grid">
+                <div class="lang-chip selected" data-lang="auto" onclick="selectLang(this)">🔄 Auto</div>
+                <div class="lang-chip" data-lang="en" onclick="selectLang(this)">🇬🇧 English</div>
+                <div class="lang-chip" data-lang="hi" onclick="selectLang(this)">🇮🇳 Hindi</div>
+                <div class="lang-chip" data-lang="ta" onclick="selectLang(this)">Tamil</div>
+                <div class="lang-chip" data-lang="te" onclick="selectLang(this)">Telugu</div>
+                <div class="lang-chip" data-lang="bn" onclick="selectLang(this)">Bengali</div>
+                <div class="lang-chip" data-lang="mr" onclick="selectLang(this)">Marathi</div>
+                <div class="lang-chip" data-lang="gu" onclick="selectLang(this)">Gujarati</div>
+                <div class="lang-chip" data-lang="kn" onclick="selectLang(this)">Kannada</div>
+            </div>
+            <button class="modal-close" onclick="closeLangModal()">Done</button>
+        </div>
+    </div>
+
+    <!-- ── TOAST CONTAINER ─────────────────────── -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        // ── STATE ──────────────────────────────────────────────────
+        const state = {
+            files: [],
+            messages: [],
+            memory: [],
+            selectedLang: 'auto',
+            sessionStats: { questions: 0, citations: 0 },
+            totalChunks: 0,
+            totalPages: 0,
+            isProcessing: false,
+            activeTab: 'preview'
+        };
+
+        // ── DEMO / MOCK DATA ──────────────────────────────────────
+        const MOCK_RESPONSES = [
+            {
+                answer: "Based on your notes, photosynthesis is the process by which plants convert light energy into chemical energy stored as glucose. The notes describe it as occurring in two stages: the light-dependent reactions in the thylakoid membrane and the Calvin cycle in the stroma.",
+                confidence: "high",
+                confScore: 5,
+                confReason: "Context directly and completely explains photosynthesis across pages 2–3",
+                citations: [
+                    { page: "PDF 1 · Page 2", section: "Biology Notes", text: "Photosynthesis occurs in two stages: light-dependent reactions..." },
+                    { page: "PDF 1 · Page 3", section: "Diagrams", text: "Calvin cycle diagram with labels for CO₂ fixation..." }
+                ],
+                chunks: [
+                    { source: "PDF 1 · Page 2 · §Biology", score: "0.94", text: "Photosynthesis: light + CO₂ + H₂O → C₆H₁₂O₆ + O₂. Two stages: light reactions (thylakoid) produce ATP and NADPH..." },
+                    { source: "PDF 1 · Page 3 · §Diagrams", score: "0.87", text: "Calvin Cycle: 3 CO₂ fixed per cycle. Enzyme RuBisCO catalyzes carboxylation. 3-carbon intermediates (3-PGA)..." },
+                    { source: "PDF 1 · Page 2 · §Notes", score: "0.71", text: "Chlorophyll absorbs light at 430nm (violet) and 662nm (red). Reflects green — hence plant colour..." }
+                ]
+            },
+            {
+                answer: "I don't have enough information in the notes to answer this question. The topic you're asking about doesn't appear in any of the uploaded documents.",
+                confidence: "low",
+                confScore: 1,
+                confReason: "No relevant context found in the indexed notes",
+                citations: [],
+                chunks: []
+            },
+            {
+                answer: "According to the notes on page 4, Newton's three laws of motion are: (1) An object remains at rest or in uniform motion unless acted upon by a net external force. (2) Force equals mass times acceleration (F = ma). (3) For every action there is an equal and opposite reaction.",
+                confidence: "high",
+                confScore: 4,
+                confReason: "Three laws stated explicitly in context from page 4",
+                citations: [
+                    { page: "PDF 1 · Page 4", section: "Physics — Laws of Motion", text: "Newton's 1st Law: An object at rest stays at rest..." },
+                ],
+                chunks: [
+                    { source: "PDF 1 · Page 4 · §Physics", score: "0.96", text: "Newton's Laws of Motion: 1st - Inertia. 2nd - F=ma. 3rd - Action-Reaction pairs. All verified by experiment..." }
+                ]
+            }
+        ];
+
+        let mockIndex = 0;
+
+        // ── UPLOAD ────────────────────────────────────────────────
+        const uploadZone = document.getElementById('upload-zone');
+        const fileInput = document.getElementById('file-input');
+
+        uploadZone.addEventListener('click', () => fileInput.click());
+        uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+        uploadZone.addEventListener('drop', e => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            handleFiles([...e.dataTransfer.files]);
+        });
+        fileInput.addEventListener('change', e => handleFiles([...e.target.files]));
+
+        function handleFiles(files) {
+            const pdfs = files.filter(f => f.type === 'application/pdf');
+            if (!pdfs.length) { showToast('Only PDF files are supported', 'error'); return; }
+            pdfs.forEach(simulateUpload);
+        }
+
+        async function simulateUpload(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            showToast(`Uploading ${file.name} to server…`, 'info');
+            document.getElementById('index-badge').textContent = 'UPLOADING…';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorMsg = await response.text();
+                    throw new Error(errorMsg || 'Upload failed');
+                }
+
+                const data = await response.json();
+
+                const fileObj = {
+                    id: data.file_id,
+                    name: data.filename,
+                    size: formatBytes(file.size),
+                    pages: data.pages,
+                    status: data.status,
+                    progress: 100
+                };
+
+                state.files.push(fileObj);
+                state.totalPages += data.pages;
+                state.totalChunks += data.chunks;
+
+                updateStats();
+                renderFilesList();
+                showToast(`${file.name} indexed — ${data.pages} pages ready`, 'success');
+
+                const indexedCount = state.files.filter(f => f.status === 'indexed').length;
+                document.getElementById('index-badge').textContent = `${indexedCount} PDF INDEXED`;
+                document.getElementById('index-badge').classList.add('active');
+
+                document.getElementById('empty-state').classList.add('hidden');
+                document.getElementById('chat-messages').classList.remove('hidden');
+
+                renderPagePreviews(fileObj);
+
+            } catch (err) {
+                console.error("Upload error:", err);
+                showToast(`Error processing ${file.name}: ${err.message}`, 'error');
+                document.getElementById('index-badge').textContent = 'UPLOAD FAILED';
+            }
+        }
+
+        function renderFilesList() {
+            const container = document.getElementById('files-list');
+            if (!state.files.length) {
+                container.innerHTML = `<div style="text-align:center;padding:24px 0;color:var(--text-muted);font-size:0.75rem;font-family:var(--font-mono);">No documents loaded</div>`;
+                return;
+            }
+            container.innerHTML = state.files.map(f => `
+    <div class="file-card ${f.status === 'indexed' ? 'active' : ''}">
+      <div class="file-icon">📄</div>
+      <div class="file-info">
+        <div class="file-name">${f.name}</div>
+        <div class="file-meta">
+          <span>${f.size}</span>
+          <span>${f.status === 'indexed' ? f.pages + ' pages' : 'Processing…'}</span>
+        </div>
+        ${f.status === 'indexing' ? `
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" style="width:${f.progress}%"></div>
+          </div>
+          <div class="progress-label"><span>OCR + Indexing</span><span>${Math.round(f.progress)}%</span></div>
+        </div>` : ''}
+      </div>
+      <div class="file-status ${f.status}"></div>
+    </div>
+  `).join('');
+        }
+
+        function updateStats() {
+            document.getElementById('stat-chunks').textContent = state.totalChunks;
+            document.getElementById('stat-pages').textContent = state.totalPages;
+            document.getElementById('export-qcount').textContent = state.sessionStats.questions;
+            document.getElementById('export-ccount').textContent = state.sessionStats.citations;
+        }
+
+        function renderPagePreviews(fileObj) {
+            const area = document.getElementById('preview-area');
+            let html = '';
+            for (let i = 1; i <= Math.min(fileObj.pages, 6); i++) {
+                html += `
+      <div class="page-thumb" onclick="highlightPage(${i})">
+        <div class="page-thumb-img">📄</div>
+        <div class="page-thumb-footer">
+          <span class="page-num">Page ${i} — ${fileObj.name}</span>
+          ${i === 1 ? '<span class="highlight-badge">ACTIVE</span>' : ''}
+        </div>
+      </div>`;
+            }
+            area.innerHTML = html;
+        }
+
+        function highlightPage(n) {
+            document.querySelectorAll('.page-thumb').forEach((el, i) => {
+                el.classList.toggle('highlighted', i === n - 1);
+                const badge = el.querySelector('.highlight-badge');
+                if (badge) badge.remove();
+                if (i === n - 1) {
+                    el.querySelector('.page-thumb-footer').insertAdjacentHTML('beforeend', '<span class="highlight-badge">CITED</span>');
+                }
+            });
+        }
+
+        // ── CHAT ──────────────────────────────────────────────────
+        function handleKey(e) {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        }
+
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+        }
+
+        function insertSuggestion(text) {
+            const input = document.getElementById('chat-input');
+            input.value = text;
+            autoResize(input);
+            input.focus();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text || state.isProcessing) return;
+
+            state.isProcessing = true;
+            input.value = '';
+            autoResize(input);
+
+            // Show chat if hidden
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('chat-messages').classList.remove('hidden');
+
+            // Append user message
+            appendMessage({ role: 'user', text });
+            updateMemoryChip();
+
+            // Show typing indicator
+            const typingId = showTyping();
+
+            try {
+                // Post to Backend
+                const response = await fetch('http://localhost:8000/api/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: text,
+                        file_ids: state.files.map(f => f.id),
+                        language: state.selectedLang,
+                        memory: state.memory
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorMsg = await response.text();
+                    throw new Error(errorMsg || 'Query failed');
+                }
+
+                const resp = await response.json();
+
+                removeTyping(typingId);
+
+                // Append AI message
+                appendAIMessage({
+                    answer: resp.answer,
+                    confidence: resp.confidence,
+                    confScore: resp.conf_score,
+                    confReason: resp.conf_reason,
+                    citations: resp.citations
+                });
+
+                // Track memory
+                state.memory.push({ role: 'user', text });
+                state.memory.push({ role: 'assistant', text: resp.answer });
+                if (state.memory.length > 20) state.memory = state.memory.slice(-20);
+
+                state.sessionStats.questions++;
+                state.sessionStats.citations += resp.citations.length;
+                updateStats();
+                updateMemoryChip();
+
+                // Render context chunks
+                renderChunks(resp.chunks);
+
+                // Highlight cited pages
+                if (resp.citations.length) {
+                    const pageNumMatch = resp.citations[0].page.match(/Page (\d+)/);
+                    if (pageNumMatch && pageNumMatch[1]) {
+                        highlightPage(parseInt(pageNumMatch[1]));
+                    }
+                    switchTab('preview');
+                    setTimeout(() => switchTab('context'), 1200);
+                }
+            } catch (err) {
+                removeTyping(typingId);
+                console.error("Query error:", err);
+                showToast(`Error: ${err.message}`, 'error');
+                appendMessage({ role: 'assistant', text: "Sorry, I ran into a system error processing your request." });
+            } finally {
+                state.isProcessing = false;
+            }
+        }
+
+        function appendMessage({ role, text }) {
+            const container = document.getElementById('chat-messages');
+            const row = document.createElement('div');
+            row.className = `msg-row ${role}`;
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            if (role === 'user') {
+                row.innerHTML = `
+      <div class="msg-avatar user-av">U</div>
+      <div class="msg-body">
+        <div class="msg-bubble user-b">${escapeHtml(text)}</div>
+        <div class="msg-meta">
+          <span class="timestamp">${time}</span>
+        </div>
+      </div>`;
+            }
+            container.appendChild(row);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendAIMessage(resp) {
+            const container = document.getElementById('chat-messages');
+            const row = document.createElement('div');
+            row.className = 'msg-row';
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const confClass = resp.confidence;
+            const confEmoji = { high: '🟢', medium: '🟡', low: '🔴' }[confClass];
+            const confText = { high: 'High Confidence', medium: 'Medium Confidence', low: 'Low Confidence' }[confClass];
+
+            const citationsHtml = resp.citations.length ? `
+    <div class="citations">
+      ${resp.citations.map(c => `
+        <div class="citation-item">
+          <span class="citation-page">📍 ${c.page}</span>
+          <span class="citation-text">${c.text}</span>
+        </div>`).join('')}
+    </div>` : '';
+
+            row.innerHTML = `
+    <div class="msg-avatar ai">✦</div>
+    <div class="msg-body">
+      <div class="msg-bubble ai">${escapeHtml(resp.answer)}${citationsHtml}</div>
+      <div class="msg-meta">
+        <span class="timestamp">${time}</span>
+        <span class="conf-badge ${confClass}">
+          <span class="conf-dot"></span>${confEmoji} ${confText} (${resp.confScore}/5)
+        </span>
+      </div>
+      <div style="margin-top:6px; font-family:var(--font-mono); font-size:0.62rem; color:var(--text-muted);">
+        ↳ ${resp.confReason}
+      </div>
+    </div>`;
+            container.appendChild(row);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function showTyping() {
+            const container = document.getElementById('chat-messages');
+            const id = 'typing-' + Date.now();
+            const row = document.createElement('div');
+            row.className = 'msg-row';
+            row.id = id;
+            row.innerHTML = `
+    <div class="msg-avatar ai">✦</div>
+    <div class="msg-body">
+      <div class="typing-indicator">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <span class="typing-label">Retrieving context…</span>
+      </div>
+    </div>`;
+            container.appendChild(row);
+            container.scrollTop = container.scrollHeight;
+            return id;
+        }
+
+        function removeTyping(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function renderChunks(chunks) {
+            const area = document.getElementById('chunks-area');
+            if (!chunks.length) {
+                area.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:0.72rem;font-family:var(--font-mono);">No relevant chunks found — answer was 'not found'</div>`;
+                return;
+            }
+            area.innerHTML = chunks.map((c, i) => `
+    <div class="chunk-card ${i === 0 ? 'top-result' : ''}">
+      <div class="chunk-header">
+        <span class="chunk-source">📎 ${c.source}</span>
+        <span class="chunk-score">${c.score}</span>
+      </div>
+      <div class="chunk-text">${escapeHtml(c.text)}</div>
+    </div>`).join('');
+        }
+
+        // ── MEMORY ───────────────────────────────────────────────
+        function updateMemoryChip() {
+            const turns = Math.floor(state.memory.length / 2);
+            document.getElementById('memory-chip').textContent = `⊙ ${turns} turn${turns !== 1 ? 's' : ''} active`;
+        }
+
+        function clearMemory() {
+            state.memory = [];
+            updateMemoryChip();
+            showToast('Conversation memory cleared', 'info');
+        }
+
+        // ── TABS ──────────────────────────────────────────────────
+        function switchTab(name) {
+            document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', ['preview', 'context', 'export'][i] === name));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            state.activeTab = name;
+        }
+
+        // ── LANGUAGE ──────────────────────────────────────────────
+        function openLangModal() { document.getElementById('lang-modal').classList.add('open'); }
+        function closeLangModal(e) {
+            if (!e || e.target === document.getElementById('lang-modal')) {
+                document.getElementById('lang-modal').classList.remove('open');
+            }
+        }
+        function selectLang(el) {
+            document.querySelectorAll('.lang-chip').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            state.selectedLang = el.dataset.lang;
+            const labels = { auto: 'AUTO', en: 'EN', hi: 'हिन्दी', ta: 'தமிழ்', te: 'తెలుగు', bn: 'বাংলা', mr: 'मराठी', gu: 'ગુજ', kn: 'ಕನ್ನಡ' };
+            document.getElementById('lang-label').textContent = labels[state.selectedLang] || state.selectedLang.toUpperCase();
+        }
+
+        // ── EXPORT ────────────────────────────────────────────────
+        async function exportReport() {
+            if (!state.sessionStats.questions) { showToast('No Q&A to export yet. Ask some questions first!', 'error'); return; }
+            showToast('Generating PDF report… downloading shortly', 'success');
+
+            try {
+                const fileId = state.files.length > 0 ? state.files[0].id : "global_session";
+                const response = await fetch(`http://localhost:8000/api/export-report?file_id=${fileId}`);
+
+                if (!response.ok) throw new Error("Report generation failed");
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `Session_Report_${fileId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                showToast('Report downloaded successfully', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Error exporting report', 'error');
+            }
+        }
+
+        async function clearSession() {
+            try {
+                await fetch('http://localhost:8000/api/session', { method: 'DELETE' });
+            } catch (err) {
+                console.error("Failed to clear backend session", err);
+            }
+
+            state.files = [];
+            state.messages = [];
+            state.memory = [];
+            state.totalChunks = 0;
+            state.totalPages = 0;
+            state.sessionStats = { questions: 0, citations: 0 };
+            mockIndex = 0;
+            renderFilesList();
+            updateStats();
+            updateMemoryChip();
+            document.getElementById('chat-messages').innerHTML = '';
+            document.getElementById('chat-messages').classList.add('hidden');
+            document.getElementById('empty-state').classList.remove('hidden');
+            document.getElementById('preview-area').innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text-muted);font-family:var(--font-mono);font-size:0.72rem;">Page previews will appear here after uploading a PDF</div>`;
+            document.getElementById('chunks-area').innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text-muted);font-family:var(--font-mono);font-size:0.72rem;">Retrieved context chunks will appear here after asking a question</div>`;
+            document.getElementById('index-badge').textContent = 'INDEX EMPTY';
+            document.getElementById('index-badge').classList.remove('active');
+            showToast('Session cleared', 'info');
+        }
+
+        // ── TOAST ─────────────────────────────────────────────────
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+            el.innerHTML = `<span>${{ success: '✓', info: 'ℹ', error: '✕' }[type]}</span><span>${msg}</span>`;
+            container.appendChild(el);
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(8px)';
+                el.style.transition = '0.3s';
+                setTimeout(() => el.remove(), 320);
+            }, 3200);
+        }
+
+        // ── UTILS ─────────────────────────────────────────────────
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+        function formatBytes(b) { return b > 1e6 ? (b / 1e6).toFixed(1) + 'MB' : (b / 1e3).toFixed(0) + 'KB'; }
+        function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+        function highlightPage(n) {
+            document.querySelectorAll('.page-thumb').forEach((el, i) => {
+                el.classList.toggle('highlighted', i === n - 1);
+                const old = el.querySelector('.highlight-badge');
+                if (old) old.remove();
+                if (i === n - 1) el.querySelector('.page-thumb-footer').insertAdjacentHTML('beforeend', '<span class="highlight-badge">CITED</span>');
+            });
+        }
+    </script>
+</body>
+
+</html>
